@@ -1,0 +1,58 @@
+[project]
+name = "intellidd_pro"
+version = "0.1.0"
+description = "AI-Powered Multi-Agent Due Diligence Intelligence Platform"
+requires-python = ">=3.11"
+
+dependencies = [
+    "langgraph>=0.2.0",
+    "langchain>=0.3.0",
+    "langchain-groq>=0.2.0",
+    "langchain-google-genai>=2.0.0",
+    "langsmith>=0.1.0",
+
+    "groq>=0.11.0",
+    "google-generativeai>=0.8.0",
+
+    "firecrawl-py>=1.0.0",
+    "playwright>=1.44.0",
+    "beautifulsoup4>=4.12.0",
+    "requests>=2.32.0",
+    "lxml>=5.2.0",
+
+    "duckduckgo-search>=6.2.0",
+
+    "pymupdf>=1.24.0",
+    "sentence-transformers>=3.0.0",
+    "chromadb>=0.5.0",
+
+    "pandas>=2.2.0",
+    "openpyxl>=3.1.0",
+
+    "aiosqlite>=0.20.0",
+
+    "plotly>=5.22.0",
+    "weasyprint>=61.0",
+
+    "apscheduler>=3.10.0",
+    "streamlit>=1.35.0",
+
+    "python-dotenv>=1.0.0",
+    "pydantic>=2.7.0",
+    "tenacity>=8.3.0",
+    "rich>=13.7.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# FIXED (NEW FORMAT)
+[dependency-groups]
+dev = [
+    "black>=24.4.0",
+    "isort>=5.13.0",
+    "mypy>=1.10.0",
+    "pytest>=8.2.0",
+    "pytest-asyncio>=0.23.0",
+]
