@@ -24,7 +24,7 @@ GROQ_API_KEY: str = os.getenv("GROQ_API_KEY", "")
 GOOGLE_API_KEY: str = os.getenv("GOOGLE_API_KEY", "")
 
 # Model names — change here to switch models globally
-GROQ_MODEL: str = "llama-3.3-70b-versatile"
+GROQ_MODEL: str = "openai/gpt-oss-120b"
 GEMINI_MODEL: str = "gemini-1.5-flash"
 
 # Which provider to try first
