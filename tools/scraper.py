@@ -48,28 +48,65 @@ def _clean_text(text: str) -> str:
 def _scrape_firecrawl(url: str) -> ScrapeResult:
     """
     Scrape using Firecrawl API — returns clean markdown.
-    Only called if FIRECRAWL_API_KEY is set.
+    Handles both dict and object responses (new Firecrawl versions).
     """
     try:
         from firecrawl import FirecrawlApp
+
         app = FirecrawlApp(api_key=config.FIRECRAWL_API_KEY)
+
         result = app.scrape(
             url,
             formats=["markdown"],
             only_main_content=True
         )
-        if result and result.get("markdown"):
+
+        # ---- Handle both response types ----
+        markdown = ""
+        metadata = {}
+
+        if isinstance(result, dict):
+            # Old format
+            markdown = result.get("markdown", "")
+            metadata = result.get("metadata", {})
+        else:
+            # New format (Document object)
+            markdown = getattr(result, "markdown", "")
+            metadata = getattr(result, "metadata", {})
+
+        # ---- Validate content ----
+        if markdown:
+            title = ""
+            if isinstance(metadata, dict):
+                title = metadata.get("title", "")
+            else:
+                title = getattr(metadata, "title", "")
+
             return ScrapeResult(
-                url = url,
-                text = _clean_text(result["markdown"]),
-                title=result.get("metadata", {}).get("title", ""),
+                url=url,
+                text=_clean_text(markdown),
+                title=title,
                 source="firecrawl",
-                metadata=result.get("metadata", ""),
+                metadata=metadata,
             )
-        return ScrapeResult(url=url, text="", success=False, source="firecrawl", error="Empty response from firecrawl")
-    
+
+        return ScrapeResult(
+            url=url,
+            text="",
+            success=False,
+            source="firecrawl",
+            error="Empty response from Firecrawl"
+        )
+
     except Exception as e:
-        return ScrapeResult(url=url, text="", title="", success=False, source="firecrawl", error=str(e))
+        return ScrapeResult(
+            url=url,
+            text="",
+            title="",
+            success=False,
+            source="firecrawl",
+            error=str(e)
+        )
 
 # Layer 2 : Playwright
 def _scrape_playwright(url: str) -> ScrapeResult:
