@@ -7,8 +7,10 @@ from pathlib import Path
 from langchain_core.messages import HumanMessage
 from pipeline.state import DDState
 from prompts.agent_prompts import INVESTOR_AGENT_PROMPT
-from tools.llm_factory import get_llm_for_agent
+from tools.llm_factory import get_llm_for_agent, call_llm_with_retry
 from tools.search import search_to_context
+from prompts.sectors import detect_sector, get_sector_label
+from prompts.sector_prompts import get_team_context
 
 AGENT_NAME = "InvestorAgent"
 
@@ -38,6 +40,9 @@ def run_investor_agent(state: DDState) -> dict:
     company_url = state["company_url"]
     output_dir = state["output_dir"]
 
+    sector = detect_sector(seed_data)
+    sector_label = get_sector_label(sector)
+
     print(f"[{AGENT_NAME}] Researching investors for: {company_name}")
 
     try:
@@ -51,9 +56,11 @@ def run_investor_agent(state: DDState) -> dict:
         prompt = INVESTOR_AGENT_PROMPT.format(
             company_name=company_name,
             company_url=company_url,
+            sector_label=sector_label,                    # ← ADD
+            sector_context=get_team_context(sector),      # ← ADD
             research_data=research_data[:8000],
         )
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = call_llm_with_retry(llm, [HumanMessage(content=prompt)], AGENT_NAME)
         investor_data = _parse_llm_json(response.content)
 
         _save_json(investor_data, output_dir, "investors.json")
