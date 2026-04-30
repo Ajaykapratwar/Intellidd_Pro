@@ -15,7 +15,7 @@ from langchain_core.messages import HumanMessage
 
 from pipeline.state import DDState
 from prompts.agent_prompts import SEED_CRAWLER_PROMPT
-from tools.llm_factory import get_llm_for_agent
+from tools.llm_factory import get_llm_for_agent, call_llm_with_retry
 from tools.scraper import scrape_url
 
 AGENT_NAME = "SeedCrawler"
@@ -91,7 +91,7 @@ def run_seed_crawler(state: DDState) -> dict:
             company_url = company_url,
         )
 
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = call_llm_with_retry(llm, [HumanMessage(content=prompt)], AGENT_NAME)
         seed_data = _parse_llm_json(response.content, AGENT_NAME)
 
         # Step 3: Save to disk
