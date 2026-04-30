@@ -7,8 +7,10 @@ import json
 from langchain_core.messages import HumanMessage
 from pipeline.state import DDState
 from prompts.agent_prompts import PRESS_AGENT_PROMPT
-from tools.llm_factory import get_llm_for_agent
+from tools.llm_factory import get_llm_for_agent, call_llm_with_retry
 from tools.search import search_to_context
+from prompts.sectors import detect_sector, get_sector_label
+from prompts.sector_prompts import get_team_context
 
 AGENT_NAME = "PressAgent"
 
@@ -35,6 +37,9 @@ def run_press_agent(state: DDState) -> dict:
     company_name = seed_data.get("company_name", "the company")
     output_dir = state["output_dir"]
 
+    sector = detect_sector(seed_data)
+    sector_label = get_sector_label(sector)
+
     print(f"[{AGENT_NAME}] Researching Press for: {company_name}")
 
     try:
@@ -47,9 +52,11 @@ def run_press_agent(state: DDState) -> dict:
         llm = get_llm_for_agent(AGENT_NAME)
         prompt = PRESS_AGENT_PROMPT.format(
             company_name=company_name,
+            sector_label=sector_label,                    # ← ADD
+            sector_context=get_team_context(sector),      # ← ADD
             research_data=research_data[:8000],
         )
-        response = llm.invoke([HumanMessage(content=prompt)])
+        response = call_llm_with_retry(llm, [HumanMessage(content=prompt)], AGENT_NAME)
 
         press_data = _parse_llm_json(response.content)
 
