@@ -1,63 +1,59 @@
 """
 pipeline/state.py — DDState: the shared data contract for the entire pipeline.
-
-Every LangGraph node receives the full state and returns a partial update.
-LangGraph merges the partial update back into the state automatically.
-
-Usage:
-    from pipeline.state import DDState
+Updated for Phase 3: adds RAG fields (chroma_collection_id, doc_context, uploaded_files).
 """
 
 from typing import TypedDict, Optional
 
+
 class DDState(TypedDict):
-    """
-    The complete state object passed through every node in the LangGraph pipeline.
+    # ── Input ─────────────────────────────────────────────────────────────────
+    company_url:    str
+    run_id:         str
+    output_dir:     str
+    uploaded_files: list   # ← NEW (Phase 3): list of uploaded file paths
 
-    Nodes only need to return the keys they modify — LangGraph
-    merges updates automatically via reducer functions.
-    """
+    # ── Stage 1: Seed Crawler ─────────────────────────────────────────────────
+    seed_data: dict
 
-    # Input
-    company_url: str           # The URL the user submitted
-    run_id: str                # UUID for this specific run (set by runner.py)
-    output_dir: str            # Path to this run's output folder
+    # ── Stage 2: Specialist Agents (parallel) ─────────────────────────────────
+    team_data:       dict
+    investor_data:   dict
+    press_data:      dict
+    financials_data: dict
+    tech_stack_data: dict
+    social_data:     dict
+    competitor_data: dict
 
-    # Stage 1 : Seed Crawler Output
-    seed_data: dict            # company_profile.json content
+    # ── Stage 3: Validation + Risk + RAG ──────────────────────────────────────
+    validation_notes:      dict
+    risk_scorecard:        dict
+    chroma_collection_id:  str   # ← NEW (Phase 3): run_id of ChromaDB collection
+    doc_context:           str   # ← NEW (Phase 3): formatted doc excerpts for synthesis
 
-    # Stage 2 : Specialist Agent Output
-    team_data: dict            # founders_team.json
-    investor_data: dict        # investors.json
-    press_data: dict           # press.json
-    financials_data: dict      # financials.json
-    tech_stack_data: dict      # tech_stack.json
-    social_data: dict          # social.json
+    # ── Stage 4: Synthesis ────────────────────────────────────────────────────
+    report_markdown: str
 
-    # Stage 3 : Validation Output
-    validation_notes: dict     # validation_notes.json
-
-    # Stage 4 : Synthesis Output
-    report_markdown: str       # The final report as a markdown string
-
-    # Metadata
-    pipeline_status: str       # "running" | "completed" | "failed"
-    errors: list               # List of error strings from any agent
-    start_time: float          # Unix timestamp of run start
-    duration_seconds: float    # Total time taken
+    # ── Metadata ──────────────────────────────────────────────────────────────
+    pipeline_status:  str
+    errors:           list
+    start_time:       float
+    duration_seconds: float
 
 
-def initial_state(company_url: str, run_id: str, output_dir: str) -> DDState:
-    """
-    Returns a DDState with all required fields initialized to safe defaults.
-    Call this in runner.py before invoking the graph.
-    """
-
+def initial_state(
+    company_url:    str,
+    run_id:         str,
+    output_dir:     str,
+    uploaded_files: list | None = None,
+) -> DDState:
+    """Returns a DDState with all fields initialized to safe defaults."""
     import time
     return DDState(
         company_url=company_url,
         run_id=run_id,
         output_dir=output_dir,
+        uploaded_files=uploaded_files or [],   # ← NEW
         seed_data={},
         team_data={},
         investor_data={},
@@ -65,10 +61,14 @@ def initial_state(company_url: str, run_id: str, output_dir: str) -> DDState:
         financials_data={},
         tech_stack_data={},
         social_data={},
+        competitor_data={},
         validation_notes={},
+        risk_scorecard={},
+        chroma_collection_id="",               # ← NEW
+        doc_context="",                        # ← NEW
         report_markdown="",
         pipeline_status="running",
         errors=[],
         start_time=time.time(),
-        duration_seconds=0.0
+        duration_seconds=0.0,
     )
