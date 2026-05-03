@@ -1,19 +1,23 @@
 """
 pipeline/graph.py — LangGraph StateGraph definition.
+Updated for Phase 3: adds doc_ingest_node and rag_node.
 
 Pipeline flow:
   START
-    → seed_node         (sequential — all agents need company_name from here)
-    → specialists_node  (parallel — 6 agents run simultaneously)
-    → validator_node    (sequential — reviews all specialist outputs)
-    → synthesis_node    (sequential — writes final report)
+    → seed_node
+    → doc_ingest_node   ← NEW (Phase 3): process uploaded docs into ChromaDB
+    → specialists_node  (7 agents in parallel)
+    → validator_node
+    → risk_node
+    → rag_node          ← NEW (Phase 3): query ChromaDB for doc context
+    → synthesis_node
   → END
-
-All agents are standard Python functions — LangGraph handles state passing.
 """
 
+import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from pathlib import Path
 
 from langgraph.graph import StateGraph, START, END
 
@@ -25,63 +29,101 @@ from agents.press_agent import run_press_agent
 from agents.financials_agent import run_financials_agent
 from agents.tech_stack_agent import run_tech_stack_agent
 from agents.social_agent import run_social_agent
+from agents.competitor_agent import run_competitor_agent
 from agents.validator_agent import run_validator
+from agents.risk_scorer import run_risk_scorer
+from agents.rag_agent import run_rag_agent           # ← NEW
 from agents.synthesis_agent import run_synthesis
 import config
+
+
+# Phase 3: Document Ingestion Node
+
+def run_doc_ingest(state: DDState) -> dict:
+    """
+    Process uploaded documents into ChromaDB.
+
+    Runs after seed_node so we have the run_id established.
+    If no files were uploaded, this is a silent no-op.
+
+    Node name: "doc_ingest_node"
+    Writes to state: chroma_collection_id
+    """
+    uploaded_files = state.get("uploaded_files", [])
+    run_id = state["run_id"]
+
+    if not uploaded_files:
+        return {"chroma_collection_id": ""}
+
+    print(f"\n  📁 [DocIngest] Processing {len(uploaded_files)} uploaded file(s)...")
+
+    try:
+        from rag.document_processor import process_document, get_document_summary
+        from rag.vector_store import VectorStore
+
+        vs = VectorStore(run_id=run_id)
+        total_chunks = 0
+
+        for file_path in uploaded_files:
+            try:
+                chunks = process_document(file_path)
+                if chunks:
+                    added = vs.add_chunks(chunks)
+                    total_chunks += added
+                    print(f"  ✅ [DocIngest] {get_document_summary(chunks)}")
+            except Exception as e:
+                print(f"  ⚠️  [DocIngest] Failed to process {file_path}: {e}")
+
+        if total_chunks > 0:
+            print(f"  ✅ [DocIngest] Total: {total_chunks} chunks stored in ChromaDB")
+            return {"chroma_collection_id": run_id}
+        else:
+            print(f"  ⚠️  [DocIngest] No chunks extracted from uploaded files")
+            return {"chroma_collection_id": ""}
+
+    except Exception as e:
+        print(f"  ❌ [DocIngest] Error: {e}")
+        return {"chroma_collection_id": ""}
 
 
 # Parallel Specialists Node
 
 def run_specialists_parallel(state: DDState) -> dict:
-    """
-    Runs all 6 specialist agents in parallel using ThreadPoolExecutor.
-
-    This is a single LangGraph node that fans out internally.
-    Each agent returns a partial state dict; we merge them all here.
-
-    Why one node instead of 6 parallel nodes?
-    LangGraph's Send API is great for dynamic fan-out, but for a fixed
-    set of agents, a single parallel node is simpler, easier to debug,
-    and handles the join automatically.
-    """
+    """Runs all 7 specialist agents in parallel."""
     company_name = state.get("seed_data", {}).get("company_name", "the company")
     print(f"\n{'='*60}")
-    print(f"Running 6 specialist agents in parallel for: {company_name}")
-    print(f"Workers: {config.MAX_WORKERS} | Timeout: {config.AGENT_TIMEOUT_SECONDS}s each")
+    print(f"  🚀 Running 7 specialist agents in parallel for: {company_name}")
+    print(f"  ⚙️  Workers: {config.MAX_WORKERS} | Timeout: {config.AGENT_TIMEOUT_SECONDS}s each")
     print(f"{'='*60}")
 
-    # Map of agent name → function
     specialists = {
-        "team":       run_team_agent,
-        "investors":  run_investor_agent,
-        "press":      run_press_agent,
-        "financials": run_financials_agent,
-        "tech_stack": run_tech_stack_agent,
-        "social":     run_social_agent,
+        "team":        run_team_agent,
+        "investors":   run_investor_agent,
+        "press":       run_press_agent,
+        "financials":  run_financials_agent,
+        "tech_stack":  run_tech_stack_agent,
+        "social":      run_social_agent,
+        "competitors": run_competitor_agent,
     }
 
-    # Merged state update from all agents
     merged_updates: dict = {}
     errors: list = list(state.get("errors", []))
 
     with ThreadPoolExecutor(max_workers=config.MAX_WORKERS) as executor:
-        # Submit all agents
         future_to_name = {
             executor.submit(_run_with_timeout, fn, state, config.AGENT_TIMEOUT_SECONDS): name
             for name, fn in specialists.items()
         }
-
-        # Collect results as they complete
         for future in as_completed(future_to_name):
             agent_name = future_to_name[future]
             try:
                 result = future.result()
                 if result:
                     merged_updates.update(result)
-                    print(f"[{agent_name}] Completed")
+                    print(f"  ✅ [{agent_name}] Collected")
             except Exception as e:
-                error_msg = f"[{agent_name}] Failed with exception: {str(e)}"
-                print(f"{error_msg}")
+                error_msg = f"[{agent_name}] Failed: {str(e)}"
+                print(f"  ❌ {error_msg}")
                 errors.append(error_msg)
 
     merged_updates["errors"] = errors
@@ -89,15 +131,11 @@ def run_specialists_parallel(state: DDState) -> dict:
 
 
 def _run_with_timeout(fn, state: DDState, timeout: int) -> dict:
-    """
-    Wrapper to run an agent function with a timeout.
-    If agent exceeds timeout, returns an error dict so pipeline continues.
-    """
     start = time.time()
     try:
         result = fn(state)
         elapsed = round(time.time() - start, 1)
-        print(f"Took {elapsed}s")
+        print(f"       ⏱  Took {elapsed}s")
         return result
     except Exception as e:
         elapsed = round(time.time() - start, 1)
@@ -109,27 +147,30 @@ def _run_with_timeout(fn, state: DDState, timeout: int) -> dict:
 def build_graph() -> StateGraph:
     """
     Constructs and compiles the LangGraph StateGraph.
-
-    Returns a compiled graph ready to invoke with:
-        graph.invoke(initial_state)
+    Phase 3: adds doc_ingest_node and rag_node.
     """
     builder = StateGraph(DDState)
 
-    # Add all nodes
+    # Register all nodes
     builder.add_node("seed_node",        run_seed_crawler)
+    builder.add_node("doc_ingest_node",  run_doc_ingest)        # ← NEW
     builder.add_node("specialists_node", run_specialists_parallel)
     builder.add_node("validator_node",   run_validator)
+    builder.add_node("risk_node",        run_risk_scorer)
+    builder.add_node("rag_node",         run_rag_agent)          # ← NEW
     builder.add_node("synthesis_node",   run_synthesis)
 
-    # Wire the edges (sequential flow)
+    # Wire edges — sequential flow
     builder.add_edge(START,               "seed_node")
-    builder.add_edge("seed_node",         "specialists_node")
+    builder.add_edge("seed_node",         "doc_ingest_node")     # ← NEW
+    builder.add_edge("doc_ingest_node",   "specialists_node")    # ← NEW (was: seed → specialists)
     builder.add_edge("specialists_node",  "validator_node")
-    builder.add_edge("validator_node",    "synthesis_node")
+    builder.add_edge("validator_node",    "risk_node")
+    builder.add_edge("risk_node",         "rag_node")            # ← NEW
+    builder.add_edge("rag_node",          "synthesis_node")      # ← NEW (was: risk → synthesis)
     builder.add_edge("synthesis_node",    END)
 
     return builder.compile()
 
 
-# Singleton compiled graph — import this in runner.py
 dd_graph = build_graph()
