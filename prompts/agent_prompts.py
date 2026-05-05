@@ -5,7 +5,6 @@ injected from prompts/sector_prompts.py at runtime.
 """
 
 # ─── Seed Crawler ─────────────────────────────────────────────────────────────
-# (No sector context needed — seed crawler DETECTS the sector)
 
 SEED_CRAWLER_PROMPT = """
 You are a company research analyst. Based on the scraped content from a company's website below, extract a structured company profile.
@@ -356,9 +355,6 @@ Return ONLY the JSON object. No explanation, no markdown, no code fences.
 
 # ─── Synthesis Agent ──────────────────────────────────────────────────────────
 
-# REPLACE your existing SYNTHESIS_PROMPT with this updated version
-# in prompts/agent_prompts.py
-
 SYNTHESIS_PROMPT = """
 You are a senior investment analyst writing a formal due diligence report.
 
@@ -442,7 +438,8 @@ Compare to sector benchmarks. Do not make up numbers not in the research data.
 """
 
 # ─── Competitor Intelligence Agent ───────────────────────────────────────────
-# APPEND THIS TO THE BOTTOM OF YOUR EXISTING prompts/agent_prompts.py
+
+# REPLACE your existing COMPETITOR_AGENT_PROMPT with this updated version
 
 COMPETITOR_AGENT_PROMPT = """
 You are a competitive intelligence analyst performing due diligence on a startup.
@@ -452,12 +449,15 @@ WEBSITE: {company_url}
 SECTOR: {sector_label}
 COMPANY PROFILE SUMMARY: {company_summary}
 
-SEARCH RESULTS AND SCRAPED DATA:
+WEB SEARCH RESULTS (for competitive context):
 {research_data}
 
+COMPETITOR HOMEPAGE CONTENT (scraped directly from each competitor's website):
+{competitor_scraped_data}
+
 Your job is to:
-1. Identify the 3-5 most direct competitors to {company_name}
-2. Build a lightweight profile of each competitor
+1. Identify the 3-5 most direct competitors to {company_name} using both the search results and scraped homepage content above
+2. Build a lightweight profile of each competitor using the scraped content as primary source
 3. Produce a side-by-side comparison matrix
 4. Assess {company_name}'s competitive positioning
 
@@ -495,6 +495,8 @@ Return a JSON object with EXACTLY these fields:
   "competitive_summary": "string — 3-4 sentence overall competitive landscape assessment"
 }}
 
+Use the scraped homepage content as the primary source for competitor descriptions and positioning.
+Cross-reference with search results for funding and team data.
 Return ONLY the JSON object. No explanation, no markdown, no code fences.
 """
 

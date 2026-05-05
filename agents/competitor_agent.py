@@ -1,9 +1,7 @@
 """
 agents/competitor_agent.py — Stage 2g: Competitor Intelligence Agent.
 
-Discovers and profiles 3-5 direct competitors for the target company,
-then produces a side-by-side comparison matrix and competitive
-positioning assessment.
+Discovers and profiles 3-5 direct competitors for the target company, then produces a side-by-side comparison matrix and competitive positioning assessment.
 
 Node name in graph: called inside "specialists_node" (parallel)
 Writes to state: competitor_data
@@ -19,7 +17,7 @@ from prompts.agent_prompts import COMPETITOR_AGENT_PROMPT
 from prompts.sectors import detect_sector, get_sector_label
 from tools.llm_factory import get_llm_for_agent, call_llm_with_retry
 from tools.scraper import scrape_url
-from tools.search import search_web, search_to_context
+from tools.search import search_to_context
 
 AGENT_NAME = "CompetitorAgent"
 
@@ -42,33 +40,28 @@ def _parse_llm_json(response_text: str) -> dict:
         return {"error": f"JSON parse failed: {e}", "raw": response_text[:500]}
 
 
-def _discover_competitors(company_name: str, sector_label: str) -> list[str]:
+def _discover_competitors(company_name: str, sector_label: str, llm) -> list[dict]:
     """
-    Step 1: Discover competitor names via search.
-    Returns a list of competitor names (strings) to profile.
+    Step 1: Discover competitor names + URLs via search, then use LLM to extract
+    structured list of {name, website} dicts.
+    Returns up to 5 competitors.
     """
     print(f"[{AGENT_NAME}] Discovering competitors for: {company_name}")
 
-    # Multi-angle search to find competitors
-    queries = [
-        f"{company_name} competitors alternatives",
-        f"best alternatives to {company_name} {sector_label}",
-        f"{company_name} vs competitors comparison",
-        f"companies similar to {company_name}",
-    ]
+    search_context = "\n\n".join([
+        search_to_context(f"{company_name} competitors alternatives", max_results=6),
+        search_to_context(f"best alternatives to {company_name} {sector_label}", max_results=5),
+    ])
 
-    competitor_names = []
-    seen = set()
-
-    for query in queries[:2]:  # limit to 2 searches to save rate limits
-        results = search_web(query, max_results=6)
-        for r in results:
-            # Collect potential competitor names from snippets
-            # We pass these to the LLM for final extraction
-            if r.snippet:
-                competitor_names.append(r.snippet)
-
-    return competitor_names
+    prompt = (
+        f"From the search results below, extract the 3-5 most direct competitors to {company_name} ({sector_label}).\n"
+        f"Return ONLY a JSON array of objects with 'name' and 'website' fields. Example:\n"
+        f'[{{"name": "Acme Corp", "website": "https://acme.com"}}]\n\n'
+        f"SEARCH RESULTS:\n{search_context[:4000]}"
+    )
+    response = call_llm_with_retry(llm, [HumanMessage(content=prompt)], AGENT_NAME)
+    result = _parse_llm_json(response.content)
+    return result if isinstance(result, list) else []
 
 
 def _scrape_competitor_basics(competitor_url: str) -> str:
@@ -112,31 +105,39 @@ def run_competitor_agent(state: DDState) -> dict:
     print(f"[{AGENT_NAME}] Researching competitors for: {company_name} [{sector_label}]")
 
     try:
-        # Step 1: Multi-angle competitor discovery searches
-        search_context_parts = [
-            search_to_context(
-                f"{company_name} competitors alternatives {sector_label}",
-                max_results=6
-            ),
-            search_to_context(
-                f"best {sector_label} companies similar to {company_name}",
-                max_results=5
-            ),
-            search_to_context(
-                f"{company_name} vs comparison review",
-                max_results=4
-            ),
-        ]
-        research_data = "\n\n".join(search_context_parts)
-
-        # Step 2: LLM extracts and profiles all competitors + builds matrix
         llm = get_llm_for_agent(AGENT_NAME)
+
+        # Step 1: Discover competitor names + URLs
+        competitors = _discover_competitors(company_name, sector_label, llm)
+        print(f"[{AGENT_NAME}] Discovered {len(competitors)} competitors to profile")
+
+        # Step 2: Scrape each competitor's homepage
+        competitor_scraped_parts = []
+        for comp in competitors[:5]:
+            website = comp.get("website", "")
+            name = comp.get("name", "Unknown")
+            if website:
+                print(f"[{AGENT_NAME}] Scraping competitor: {name}")
+                scraped = _scrape_competitor_basics(website)
+                if scraped:
+                    competitor_scraped_parts.append(f"### {name} ({website})\n{scraped}")
+        competitor_scraped_data = "\n\n".join(competitor_scraped_parts) or "No competitor homepages scraped."
+
+        # Step 3: Broad search context for the full matrix
+        research_data = "\n\n".join([
+            search_to_context(f"{company_name} competitors alternatives {sector_label}", max_results=6),
+            search_to_context(f"best {sector_label} companies similar to {company_name}", max_results=5),
+            search_to_context(f"{company_name} vs comparison review", max_results=4),
+        ])
+
+        # Step 4: LLM builds full competitor matrix using both search + scraped data
         prompt = COMPETITOR_AGENT_PROMPT.format(
             company_name=company_name,
             company_url=company_url,
             sector_label=sector_label,
             company_summary=company_summary,
-            research_data=research_data[:8000],
+            research_data=research_data[:6000],
+            competitor_scraped_data=competitor_scraped_data[:4000],
         )
         response = call_llm_with_retry(llm, [HumanMessage(content=prompt)], AGENT_NAME)
         competitor_data = _parse_llm_json(response.content)
