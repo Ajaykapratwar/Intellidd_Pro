@@ -466,9 +466,9 @@ After running on any company, the `outputs/` folder contains:
 | **Phase 1** | ✅ Complete | Core LangGraph pipeline, 6 specialist agents |
 | **Phase 1.5** | ✅ Complete | Sector-aware prompts for 7 industry verticals |
 | **Phase 2** | ✅ Complete | Competitor Intel Agent + Risk Scoring Engine |
-| **Phase 3** | 🔄 In Progress | Document RAG with ChromaDB (upload pitch decks) |
-| **Phase 4** | 📋 Planned | SQLite persistence + run history + report comparison |
-| **Phase 5** | 📋 Planned | ReAct Q&A agent with LangGraph subgraph |
+| **Phase 3** | ✅ Complete | Document RAG with ChromaDB (upload pitch decks) |
+| **Phase 4** | ✅ Complete | SQLite persistence + run history + report comparison |
+| **Phase 5** | 🔄 In Progress | ReAct Q&A agent with LangGraph subgraph |
 | **Phase 6** | 📋 Planned | LangSmith observability wired into Streamlit UI |
 | **Phase 7** | 📋 Planned | APScheduler monitoring + email/Slack alerts |
 | **Phase 8** | 📋 Planned | PDF export + polish + production deployment |
