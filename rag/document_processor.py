@@ -170,7 +170,7 @@ def _process_csv(file_path: Path) -> list[DocumentChunk]:
     except ImportError:
         raise ImportError("pandas not installed. Run: uv sync")
 
-    print(f"  📊 [DocProcessor] Processing CSV: {file_path.name}")
+    print(f"  📄 [DocProcessor] Processing CSV: {file_path.name}")
     df = pd.read_csv(file_path)
 
     # Build a structured text representation
@@ -215,7 +215,7 @@ def _process_xlsx(file_path: Path) -> list[DocumentChunk]:
     except ImportError:
         raise ImportError("pandas not installed. Run: uv sync")
 
-    print(f"  📊 [DocProcessor] Processing XLSX: {file_path.name}")
+    print(f"  📄 [DocProcessor] Processing XLSX: {file_path.name}")
     all_chunks = []
 
     xl = pd.ExcelFile(file_path)

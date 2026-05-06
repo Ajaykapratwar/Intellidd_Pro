@@ -57,8 +57,8 @@ def run_financials_agent(state: DDState) -> dict:
         prompt = FINANCIALS_AGENT_PROMPT.format(
             company_name=company_name,
             company_url=company_url,
-            sector_label=sector_label,                    # ← ADD
-            sector_context=get_team_context(sector),      # ← ADD
+            sector_label=sector_label,
+            sector_context=get_team_context(sector),
             research_data=research_data[:8000],
         )
         response = call_llm_with_retry(llm, [HumanMessage(content=prompt)], AGENT_NAME)

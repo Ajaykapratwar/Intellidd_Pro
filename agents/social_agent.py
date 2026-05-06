@@ -52,8 +52,8 @@ def run_social_agent(state: DDState) -> dict:
         llm = get_llm_for_agent(AGENT_NAME)
         prompt = SOCIAL_AGENT_PROMPT.format(
             company_name=company_name,
-            sector_label=sector_label,                    # ← ADD
-            sector_context=get_team_context(sector),      # ← ADD
+            sector_label=sector_label,
+            sector_context=get_team_context(sector),
             research_data=research_data[:8000],
         )
         response = call_llm_with_retry(llm, [HumanMessage(content=prompt)], AGENT_NAME)

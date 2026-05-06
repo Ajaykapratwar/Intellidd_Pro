@@ -117,19 +117,14 @@ class VectorStore:
         print(f"  ✅ [VectorStore] All {total_added} chunks embedded and stored")
         return total_added
 
-    def query(
-        self,
-        query_text: str,
-        n_results: int = 5,
-        where: Optional[dict] = None,
-    ) -> list[dict]:
+    def query(self, query_text: str, n_results: int = 5, where: Optional[dict] = None,) -> list[dict]:
         """
         Retrieve the most semantically similar chunks for a query.
 
         Args:
-            query_text: Natural language query string
-            n_results:  Number of chunks to return (default 5)
-            where:      Optional ChromaDB metadata filter
+            query_text:  Natural language query string
+            n_results:   Number of chunks to return (default 5)
+            where:       Optional ChromaDB metadata filter
 
         Returns:
             List of dicts: text, source_file, page_or_sheet, chunk_index, distance
@@ -150,11 +145,7 @@ class VectorStore:
 
             output = []
             if results and results["documents"] and results["documents"][0]:
-                for doc, meta, dist in zip(
-                    results["documents"][0],
-                    results["metadatas"][0],
-                    results["distances"][0],
-                ):
+                for doc, meta, dist in zip(results["documents"][0], results["metadatas"][0], results["distances"][0], ):
                     output.append({
                         "text":          doc,
                         "source_file":   meta.get("source_file", "unknown"),

@@ -72,7 +72,7 @@ def run_synthesis(state: DDState) -> dict:
         duration   = round(time.time() - start_time, 1)
 
         print(f"  ✅ [{AGENT_NAME}] Report saved: {report_path}")
-        print(f"  ⏱️  Total pipeline duration: {duration}s")
+        print(f"  Total pipeline duration: {duration}s")
         print(f"\n{'='*60}")
         print(f"  ✅ PIPELINE COMPLETE for {company_name}")
         print(f"  📁 Outputs saved to: {output_dir}")

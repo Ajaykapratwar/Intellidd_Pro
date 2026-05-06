@@ -11,12 +11,12 @@ class DDState(TypedDict):
     company_url:    str
     run_id:         str
     output_dir:     str
-    uploaded_files: list   # ← NEW (Phase 3): list of uploaded file paths
+    uploaded_files: list
 
     # ── Stage 1: Seed Crawler ─────────────────────────────────────────────────
     seed_data: dict
 
-    # ── Stage 2: Specialist Agents (parallel) ─────────────────────────────────
+    # ── Stage 2: Specialist Agents ─────────────────────────────────
     team_data:       dict
     investor_data:   dict
     press_data:      dict
@@ -28,8 +28,8 @@ class DDState(TypedDict):
     # ── Stage 3: Validation + Risk + RAG ──────────────────────────────────────
     validation_notes:      dict
     risk_scorecard:        dict
-    chroma_collection_id:  str   # ← NEW (Phase 3): run_id of ChromaDB collection
-    doc_context:           str   # ← NEW (Phase 3): formatted doc excerpts for synthesis
+    chroma_collection_id:  str
+    doc_context:           str
 
     # ── Stage 4: Synthesis ────────────────────────────────────────────────────
     report_markdown: str

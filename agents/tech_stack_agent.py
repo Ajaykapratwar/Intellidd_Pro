@@ -66,7 +66,7 @@ def run_tech_stack_agent(state: DDState) -> dict:
         prompt = TECH_STACK_AGENT_PROMPT.format(
             company_name=company_name,
             company_url=company_url,
-            sector_label=sector_label,                    # ← ADD
+            sector_label=sector_label,
             sector_context=get_team_context(sector),
             research_data=research_data[:8000],
         )

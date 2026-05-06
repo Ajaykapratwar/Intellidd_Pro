@@ -75,7 +75,7 @@ def run_validator(state: DDState) -> dict:
         llm = get_llm_for_agent(AGENT_NAME)
         prompt = VALIDATOR_PROMPT.format(
             company_name=company_name,
-            sector_label=sector_label,                    # ← ADD
+            sector_label=sector_label,
             sector_context=get_team_context(sector),      
             all_research_json=json.dumps(all_research, indent=2)[:10000],
         )

@@ -173,17 +173,6 @@ with st.sidebar:
 6. Full investment report generated
     """)
 
-    st.markdown("---")
-    st.markdown("### 🆓 Free Tier Stack")
-    st.markdown("""
-- **LLM:** Groq llama-3.3-70b
-- **Fallback:** Google Gemini Flash
-- **Search:** DuckDuckGo (no key)
-- **Scraper:** Firecrawl / Playwright
-- **RAG:** ChromaDB + sentence-transformers
-- **Tracing:** LangSmith
-    """)
-
 
 # ── Main Input Section ────────────────────────────────────────────────────────
 st.markdown('<div class="section-header">🔍 Research Target</div>', unsafe_allow_html=True)

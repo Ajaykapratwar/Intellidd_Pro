@@ -1,8 +1,7 @@
 """
 agents/risk_scorer.py — Stage 3b: Quantitative Risk Scoring Engine.
 
-Runs AFTER the validator. Analyzes all research data and produces
-a structured risk scorecard across 5 investment dimensions:
+Runs AFTER the validator. Analyzes all research data and produces a structured risk scorecard across 5 investment dimensions:
   1. Founder Risk
   2. Market Risk
   3. Financial Risk

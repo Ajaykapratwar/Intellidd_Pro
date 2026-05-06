@@ -1,8 +1,7 @@
 """
 agents/rag_agent.py — Document RAG Agent.
 
-Queries the ChromaDB vector store with section-specific questions
-to extract relevant context from uploaded documents.
+Queries the ChromaDB vector store with section-specific questions to extract relevant context from uploaded documents.
 
 This agent runs ONLY when documents have been uploaded.
 If no documents exist, it's a no-op and the pipeline continues normally.

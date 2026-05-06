@@ -5,11 +5,11 @@ Updated for Phase 3: adds doc_ingest_node and rag_node.
 Pipeline flow:
   START
     → seed_node
-    → doc_ingest_node   ← NEW (Phase 3): process uploaded docs into ChromaDB
+    → doc_ingest_node
     → specialists_node  (7 agents in parallel)
     → validator_node
     → risk_node
-    → rag_node          ← NEW (Phase 3): query ChromaDB for doc context
+    → rag_node
     → synthesis_node
   → END
 """
@@ -92,8 +92,8 @@ def run_specialists_parallel(state: DDState) -> dict:
     """Runs all 7 specialist agents in parallel."""
     company_name = state.get("seed_data", {}).get("company_name", "the company")
     print(f"\n{'='*60}")
-    print(f"  🚀 Running 7 specialist agents in parallel for: {company_name}")
-    print(f"  ⚙️  Workers: {config.MAX_WORKERS} | Timeout: {config.AGENT_TIMEOUT_SECONDS}s each")
+    print(f"  Running 7 specialist agents in parallel for: {company_name}")
+    print(f"  Workers: {config.MAX_WORKERS} | Timeout: {config.AGENT_TIMEOUT_SECONDS}s each")
     print(f"{'='*60}")
 
     specialists = {
@@ -153,21 +153,21 @@ def build_graph() -> StateGraph:
 
     # Register all nodes
     builder.add_node("seed_node",        run_seed_crawler)
-    builder.add_node("doc_ingest_node",  run_doc_ingest)        # ← NEW
+    builder.add_node("doc_ingest_node",  run_doc_ingest)
     builder.add_node("specialists_node", run_specialists_parallel)
     builder.add_node("validator_node",   run_validator)
     builder.add_node("risk_node",        run_risk_scorer)
-    builder.add_node("rag_node",         run_rag_agent)          # ← NEW
+    builder.add_node("rag_node",         run_rag_agent)
     builder.add_node("synthesis_node",   run_synthesis)
 
     # Wire edges — sequential flow
     builder.add_edge(START,               "seed_node")
-    builder.add_edge("seed_node",         "doc_ingest_node")     # ← NEW
-    builder.add_edge("doc_ingest_node",   "specialists_node")    # ← NEW (was: seed → specialists)
+    builder.add_edge("seed_node",         "doc_ingest_node")
+    builder.add_edge("doc_ingest_node",   "specialists_node")
     builder.add_edge("specialists_node",  "validator_node")
     builder.add_edge("validator_node",    "risk_node")
-    builder.add_edge("risk_node",         "rag_node")            # ← NEW
-    builder.add_edge("rag_node",          "synthesis_node")      # ← NEW (was: risk → synthesis)
+    builder.add_edge("risk_node",         "rag_node")
+    builder.add_edge("rag_node",          "synthesis_node")
     builder.add_edge("synthesis_node",    END)
 
     return builder.compile()
