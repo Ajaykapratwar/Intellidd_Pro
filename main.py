@@ -20,6 +20,8 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
+from persistence.db import init_db
+from pipeline.runner import run_due_diligence
 
 import streamlit as st
 
@@ -30,6 +32,8 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded",
 )
+
+init_db()
 
 # ── Imports ───────────────────────────────────────────────────────────────────
 import config
@@ -281,13 +285,6 @@ if run_button and company_url.strip():
     add_log("🌱 Seed Crawler: scraping homepage...")
 
     # ── Build initial state + run graph ─────────────────────────────────────
-    state = initial_state(
-        company_url=url,
-        run_id=run_id,
-        output_dir=output_dir,
-        uploaded_files=saved_file_paths,
-    )
-
     try:
         # Run the full LangGraph pipeline
         start_time = time.time()
@@ -297,7 +294,10 @@ if run_button and company_url.strip():
         progress_bar.progress(20, text="Stage 1: Seed Crawling...")
         add_log("🌱 Extracting company profile...")
 
-        final_state = dd_graph.invoke(state)
+        final_state = run_due_diligence(
+            company_url=url,
+            uploaded_files=saved_file_paths,
+        )
 
         elapsed = round(time.time() - start_time, 1)
         progress_bar.progress(100, text="✅ Pipeline complete!")
