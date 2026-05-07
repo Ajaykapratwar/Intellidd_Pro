@@ -220,17 +220,17 @@ intellidd_pro/
 ├── .env.example                # template — copy to .env and fill keys
 │
 ├── agents/                     # one file per specialist agent
-│   ├── seed_crawler.py         # stage 1: website crawl + profile extraction
-│   ├── team_agent.py           # stage 2a: founders + leadership research
-│   ├── investor_agent.py       # stage 2b: funding + investor research
-│   ├── press_agent.py          # stage 2c: media coverage + sentiment
-│   ├── financials_agent.py     # stage 2d: financial signals extraction
-│   ├── tech_stack_agent.py     # stage 2e: technology + engineering research
-│   ├── social_agent.py         # stage 2f: social media + brand research
-│   ├── competitor_agent.py     # stage 2g: competitor discovery + matrix ⭐
-│   ├── validator_agent.py      # stage 3: cross-validation + gap detection
-│   ├── risk_scorer.py          # stage 3b: quantitative risk scoring ⭐
-│   └── synthesis_agent.py      # stage 4: final report generation
+│   ├── seed_crawler.py         # website crawl + profile extraction
+│   ├── team_agent.py           # founders + leadership research
+│   ├── investor_agent.py       # funding + investor research
+│   ├── press_agent.py          # media coverage + sentiment
+│   ├── financials_agent.py     # financial signals extraction
+│   ├── tech_stack_agent.py     # technology + engineering research
+│   ├── social_agent.py         # social media + brand research
+│   ├── competitor_agent.py     # competitor discovery + matrix
+│   ├── validator_agent.py      # cross-validation + gap detection
+│   ├── risk_scorer.py          # quantitative risk scoring
+│   └── synthesis_agent.py      # final report generation
 │
 ├── pipeline/
 │   ├── state.py                # DDState TypedDict — shared data contract
@@ -240,7 +240,7 @@ intellidd_pro/
 ├── prompts/
 │   ├── agent_prompts.py        # all LLM prompts — one place to tune
 │   ├── sectors.py              # sector detection enum + detect_sector()
-│   └── sector_prompts.py       # sector-specific research signals per agent ⭐
+│   └── sector_prompts.py       # sector-specific research signals per agent
 │
 ├── tools/
 │   ├── llm_factory.py          # Groq + Gemini factory with auto-fallback + retry
@@ -249,24 +249,24 @@ intellidd_pro/
 │
 ├── ui/
 │   ├── components/
-│   │   ├── risk_chart.py       # Plotly radar + gauge chart components ⭐
-│   │   ├── report_card.py      # structured report display (Phase 4)
-│   │   └── comparison_diff.py  # run comparison view (Phase 4)
+│   │   ├── risk_chart.py       # Plotly radar + gauge chart components
+│   │   ├── report_card.py      # structured report display
+│   │   └── comparison_diff.py  # run comparison view
 │   └── pages/
 │       ├── 1_Research.py       # main DD pipeline page
-│       ├── 2_History.py        # past reports + comparison (Phase 4)
-│       ├── 3_Monitoring.py     # company monitor management (Phase 7)
-│       └── 4_QA_Chat.py        # ReAct Q&A chat interface (Phase 5)
+│       ├── 2_History.py        # past reports + comparison
+│       ├── 3_Monitoring.py     # company monitor management
+│       └── 4_QA_Chat.py        # ReAct Q&A chat interface
 │
-├── rag/                        # Phase 3
+├── rag/                       
 │   ├── document_processor.py   # PDF/CSV/XLSX → chunks
 │   └── vector_store.py         # ChromaDB operations
 │
-├── persistence/                # Phase 4
+├── persistence/               
 │   ├── db.py                   # SQLite setup + migrations
 │   └── queries.py              # all query functions
 │
-├── monitoring/                 # Phase 7
+├── monitoring/               
 │   ├── scheduler.py            # APScheduler setup
 │   ├── change_detector.py      # report diffing logic
 │   └── alerting.py             # email + Slack alerts
@@ -280,11 +280,11 @@ intellidd_pro/
         ├── financials.json
         ├── tech_stack.json
         ├── social.json
-        ├── competitor_intel.json   ⭐
+        ├── competitor_intel.json   
         ├── validation_notes.json
-        ├── risk_scorecard.json     ⭐
+        ├── risk_scorecard.json     
         ├── report.md
-        └── report.pdf              (Phase 4)
+        └── report.pdf            
 ```
 
 ---
@@ -468,9 +468,9 @@ After running on any company, the `outputs/` folder contains:
 | **Phase 2** | ✅ Complete | Competitor Intel Agent + Risk Scoring Engine |
 | **Phase 3** | ✅ Complete | Document RAG with ChromaDB (upload pitch decks) |
 | **Phase 4** | ✅ Complete | SQLite persistence + run history + report comparison |
-| **Phase 5** | 🔄 In Progress | ReAct Q&A agent with LangGraph subgraph |
-| **Phase 6** | 📋 Planned | LangSmith observability wired into Streamlit UI |
-| **Phase 7** | 📋 Planned | APScheduler monitoring + email/Slack alerts |
+| **Phase 5** | ✅ Complete | ReAct Q&A agent with LangGraph subgraph |
+| **Phase 6** | ✅ Complete | LangSmith observability wired into Streamlit UI |
+| **Phase 7** | 🔄 In Progress | APScheduler monitoring + email/Slack alerts |
 | **Phase 8** | 📋 Planned | PDF export + polish + production deployment |
 
 ---
