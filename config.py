@@ -70,11 +70,13 @@ CHROMA_PATH: str = os.getenv("CHROMA_PATH", str(ROOT_DIR / "chroma_store"))
 # Observability
 LANGCHAIN_TRACING_V2: bool = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
 LANGCHAIN_PROJECT: str = os.getenv("LANGCHAIN_PROJECT", "intellidd-pro")
+LANGCHAIN_API_KEY: str = os.getenv("LANGCHAIN_API_KEY", "")
 
 # Set these for LangSmith — LangGraph picks them up automatically
 if LANGCHAIN_TRACING_V2:
     os.environ["LANGCHAIN_TRACING_V2"] = "true"
     os.environ["LANGCHAIN_PROJECT"] = LANGCHAIN_PROJECT
+    os.environ["LANGCHAIN_API_KEY"] = LANGCHAIN_API_KEY
 
 
 # Alerting Config (Phase 7)

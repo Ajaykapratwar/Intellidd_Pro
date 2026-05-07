@@ -22,6 +22,7 @@ import uuid
 from pathlib import Path
 from persistence.db import init_db
 from pipeline.runner import run_due_diligence
+from tools.observability import check_langsmith_config
 
 import streamlit as st
 
@@ -177,6 +178,21 @@ with st.sidebar:
 6. Full investment report generated
     """)
 
+
+    st.markdown("---")
+    st.markdown("### 🔭 Observability")
+    ls_cfg = check_langsmith_config()
+    if ls_cfg["enabled"]:
+        st.success("LangSmith tracing ✅")
+        st.caption(f"Project: `{ls_cfg['project']}`")
+        st.link_button(
+            "Open Dashboard →",
+            "https://smith.langchain.com",
+            use_container_width=True,
+        )
+    else:
+        st.warning("LangSmith disabled")
+        st.caption(ls_cfg["status_message"])
 
 # ── Main Input Section ────────────────────────────────────────────────────────
 st.markdown('<div class="section-header">🔍 Research Target</div>', unsafe_allow_html=True)
@@ -428,6 +444,28 @@ if run_button and company_url.strip():
         st.markdown(report_md)
     else:
         st.error("Report generation failed. Check agent errors above.")
+
+    # ── Launch Q&A Chat ───────────────────────────────────────────────────────────
+    st.markdown("---")
+    st.markdown('<div class="section-header">💬 Chat with this Report</div>',
+                unsafe_allow_html=True)
+
+    chat_info_col, chat_btn_col = st.columns([3, 1])
+    with chat_info_col:
+        st.markdown(
+            "Ask follow-up questions about this report using the ReAct Q&A agent. "
+            "The agent can search the report, query uploaded documents, look up web info, "
+            "and compare with past runs."
+        )
+    with chat_btn_col:
+        if st.button(
+            "💬 Open Q&A Chat",
+            type="primary",
+            use_container_width=True,
+        ):
+            # Store the run_id in session state so the chat page pre-selects it
+            st.session_state["qa_run_id"] = final_state.get("run_id", "")
+            st.switch_page("pages/3_QA_Chat.py")
 
     # ── Downloads ────────────────────────────────────────────────────────────
     st.markdown("---")

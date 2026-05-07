@@ -1,6 +1,5 @@
 """
 pipeline/graph.py — LangGraph StateGraph definition.
-Updated for Phase 3: adds doc_ingest_node and rag_node.
 
 Pipeline flow:
   START
@@ -12,12 +11,14 @@ Pipeline flow:
     → rag_node
     → synthesis_node
   → END
+
+Performance tracking:
+  Each node records its elapsed time.
+  All timings collected into performance_stats in DDState.
 """
 
-import json
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from pathlib import Path
 
 from langgraph.graph import StateGraph, START, END
 
@@ -32,9 +33,55 @@ from agents.social_agent import run_social_agent
 from agents.competitor_agent import run_competitor_agent
 from agents.validator_agent import run_validator
 from agents.risk_scorer import run_risk_scorer
-from agents.rag_agent import run_rag_agent           # ← NEW
+from agents.rag_agent import run_rag_agent
 from agents.synthesis_agent import run_synthesis
 import config
+
+# ── Timed node wrapper ────────────────────────────────────────────────────────
+
+def _timed_node(node_key: str, fn, state: DDState) -> dict:
+    """
+    Run a sequential node and record its elapsed time into performance_stats.
+
+    Args:
+        node_key:  Short key for this node (e.g. "seed", "validator")
+        fn:        The node function to call
+        state:     Current DDState
+
+    Returns:
+        Result dict from fn, with performance_stats updated.
+    """
+    start = time.time()
+    result = fn(state)
+    elapsed = round(time.time() - start, 1)
+
+    # Merge timing into existing performance_stats
+    existing = dict(state.get("performance_stats", {}))
+    existing_timings = dict(existing.get("agent_timings", {}))
+    existing_timings[node_key] = elapsed
+
+    existing["agent_timings"] = existing_timings
+    result["performance_stats"] = existing
+
+    print(f"  ⏱  [{node_key}] {elapsed}s")
+    return result
+
+# ── Wrapped sequential nodes ──────────────────────────────────────────────────
+
+def timed_seed_crawler(state: DDState) -> dict:
+    return _timed_node("seed", run_seed_crawler, state)
+
+def timed_validator(state: DDState) -> dict:
+    return _timed_node("validator", run_validator, state)
+
+def timed_risk_scorer(state: DDState) -> dict:
+    return _timed_node("risk", run_risk_scorer, state)
+
+def timed_rag_agent(state: DDState) -> dict:
+    return _timed_node("rag", run_rag_agent, state)
+
+def timed_synthesis(state: DDState) -> dict:
+    return _timed_node("synthesis", run_synthesis, state)
 
 
 # Phase 3: Document Ingestion Node
@@ -109,37 +156,57 @@ def run_specialists_parallel(state: DDState) -> dict:
     merged_updates: dict = {}
     errors: list = list(state.get("errors", []))
 
+    # Track per-agent start times for timing
+    agent_timings: dict = dict(
+        state.get("performance_stats", {}).get("agent_timings", {})
+    )
+    agent_start_times: dict = {}
+
     with ThreadPoolExecutor(max_workers=config.MAX_WORKERS) as executor:
-        future_to_name = {
-            executor.submit(_run_with_timeout, fn, state, config.AGENT_TIMEOUT_SECONDS): name
-            for name, fn in specialists.items()
-        }
+        future_to_name = {}
+        for name, fn in specialists.items():
+            agent_start_times[name] = time.time()
+            future = executor.submit(_run_with_timed, fn, state, name)
+            future_to_name[future] = name
+
         for future in as_completed(future_to_name):
             agent_name = future_to_name[future]
             try:
-                result = future.result()
+                result, elapsed = future.result()
                 if result:
                     merged_updates.update(result)
-                    print(f"  ✅ [{agent_name}] Collected")
+                agent_timings[agent_name] = elapsed
+                print(f"  ✅ [{agent_name}] Collected ({elapsed}s)")
             except Exception as e:
+                elapsed = round(time.time() - agent_start_times[agent_name], 1)
+                agent_timings[agent_name] = elapsed
                 error_msg = f"[{agent_name}] Failed: {str(e)}"
                 print(f"  ❌ {error_msg}")
                 errors.append(error_msg)
 
+    # Store updated timings in performance_stats
+    existing_stats = dict(state.get("performance_stats", {}))
+    existing_stats["agent_timings"] = agent_timings
+    merged_updates["performance_stats"] = existing_stats
     merged_updates["errors"] = errors
+
     return merged_updates
 
 
-def _run_with_timeout(fn, state: DDState, timeout: int) -> dict:
+def _run_with_timed(fn, state: DDState, name: str) -> tuple[dict, float]:
+    """
+    Run an agent function and return (result, elapsed_seconds).
+    Used inside run_specialists_parallel.
+    """
     start = time.time()
     try:
         result = fn(state)
         elapsed = round(time.time() - start, 1)
         print(f"       ⏱  Took {elapsed}s")
-        return result
+        return result, elapsed
     except Exception as e:
         elapsed = round(time.time() - start, 1)
-        raise RuntimeError(f"Agent failed after {elapsed}s: {e}") from e
+        raise RuntimeError(f"Agent [{name}] failed after {elapsed}s: {e}") from e
 
 
 # Build the Graph
@@ -152,13 +219,13 @@ def build_graph() -> StateGraph:
     builder = StateGraph(DDState)
 
     # Register all nodes
-    builder.add_node("seed_node",        run_seed_crawler)
+    builder.add_node("seed_node",        timed_seed_crawler)
     builder.add_node("doc_ingest_node",  run_doc_ingest)
     builder.add_node("specialists_node", run_specialists_parallel)
-    builder.add_node("validator_node",   run_validator)
-    builder.add_node("risk_node",        run_risk_scorer)
-    builder.add_node("rag_node",         run_rag_agent)
-    builder.add_node("synthesis_node",   run_synthesis)
+    builder.add_node("validator_node",   timed_validator)
+    builder.add_node("risk_node",        timed_risk_scorer)
+    builder.add_node("rag_node",         timed_rag_agent)
+    builder.add_node("synthesis_node",   timed_synthesis)
 
     # Wire edges — sequential flow
     builder.add_edge(START,               "seed_node")

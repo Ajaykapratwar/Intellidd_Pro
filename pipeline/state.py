@@ -1,6 +1,5 @@
 """
 pipeline/state.py — DDState: the shared data contract for the entire pipeline.
-Updated for Phase 3: adds RAG fields (chroma_collection_id, doc_context, uploaded_files).
 """
 
 from typing import TypedDict, Optional
@@ -34,6 +33,9 @@ class DDState(TypedDict):
     # ── Stage 4: Synthesis ────────────────────────────────────────────────────
     report_markdown: str
 
+    performance_status: dict
+    langsmith_trace_url: str
+
     # ── Metadata ──────────────────────────────────────────────────────────────
     pipeline_status:  str
     errors:           list
@@ -53,7 +55,7 @@ def initial_state(
         company_url=company_url,
         run_id=run_id,
         output_dir=output_dir,
-        uploaded_files=uploaded_files or [],   # ← NEW
+        uploaded_files=uploaded_files or [],
         seed_data={},
         team_data={},
         investor_data={},
@@ -64,9 +66,11 @@ def initial_state(
         competitor_data={},
         validation_notes={},
         risk_scorecard={},
-        chroma_collection_id="",               # ← NEW
-        doc_context="",                        # ← NEW
+        chroma_collection_id="",
+        doc_context="",
         report_markdown="",
+        performance_status={},
+        langsmith_trace_url="",
         pipeline_status="running",
         errors=[],
         start_time=time.time(),
