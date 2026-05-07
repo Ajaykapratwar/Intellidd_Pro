@@ -546,7 +546,6 @@ This project is licensed under the **MIT License** — see [LICENSE](LICENSE) fo
 
 ## 🙏 Acknowledgments
 
-- Inspired by [`awesome-ai-apps/due_diligence_agent`](https://github.com/Arindam200/awesome-ai-apps/tree/main/advance_ai_agents/due_diligence_agent) by [@Arindam200](https://github.com/Arindam200)
 - Built with [LangGraph](https://langchain-ai.github.io/langgraph/) by LangChain
 - LLM inference powered by [Groq](https://groq.com) (free tier)
 - Agent observability via [LangSmith](https://smith.langchain.com)
