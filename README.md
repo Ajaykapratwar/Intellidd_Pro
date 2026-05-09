@@ -419,7 +419,7 @@ After running on any company, the `outputs/` folder contains:
 
 ---
 
-## 🆚 IntelliDD Pro vs Baseline Project
+## IntelliDD Pro vs Baseline Project
 
 | Feature | Baseline (`due_diligence_agent`) | **IntelliDD Pro** |
 |---------|----------------------------------|-------------------|
@@ -437,7 +437,7 @@ After running on any company, the `outputs/` folder contains:
 | Q&A Agent | Prompt only (not wired) | **Full ReAct LangGraph subgraph** |
 | Monitoring | None | **APScheduler + email/Slack alerts** |
 | PDF Export | None | **WeasyPrint styled PDF** |
-| Zero-cost runnable | ❌ (requires paid keys) | **✅ 100% free tier** |
+| Zero-cost runnable | (requires paid keys) | **100% free tier** |
 
 ---
 
@@ -458,30 +458,13 @@ After running on any company, the `outputs/` folder contains:
 
 ---
 
-## 🗺️ Roadmap
-
-| Phase | Status | Description |
-|-------|--------|-------------|
-| **Phase 0** | ✅ Complete | Project setup, uv environment, free tool layer |
-| **Phase 1** | ✅ Complete | Core LangGraph pipeline, 6 specialist agents |
-| **Phase 1.5** | ✅ Complete | Sector-aware prompts for 7 industry verticals |
-| **Phase 2** | ✅ Complete | Competitor Intel Agent + Risk Scoring Engine |
-| **Phase 3** | ✅ Complete | Document RAG with ChromaDB (upload pitch decks) |
-| **Phase 4** | ✅ Complete | SQLite persistence + run history + report comparison |
-| **Phase 5** | ✅ Complete | ReAct Q&A agent with LangGraph subgraph |
-| **Phase 6** | ✅ Complete | LangSmith observability wired into Streamlit UI |
-| **Phase 7** | 🔄 In Progress | APScheduler monitoring + email/Slack alerts |
-| **Phase 8** | 📋 Planned | PDF export + polish + production deployment |
-
----
-
 ## 🔧 Configuration Reference
 
 All configuration is managed through environment variables in `.env`:
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `GROQ_API_KEY` | ✅ Yes | — | Primary LLM. Free at console.groq.com |
+| `GROQ_API_KEY` | Yes | — | Primary LLM. Free at console.groq.com |
 | `GOOGLE_API_KEY` | Recommended | — | Fallback LLM when Groq rate-limits |
 | `FIRECRAWL_API_KEY` | Optional | — | Better scraping. Falls back to Playwright |
 | `LANGCHAIN_API_KEY` | Optional | — | LangSmith tracing |
@@ -509,7 +492,7 @@ IntelliDD Pro has a built-in **3-layer rate limit protection** in `tools/llm_fac
 
 ## 🤝 Contributing
 
-Contributions are welcome! This is an active portfolio project being built phase by phase.
+Contributions are welcome! This is an active portfolio project.
 
 ```bash
 # Fork and clone
@@ -535,12 +518,6 @@ uv run pytest tests/
 - Better competitor discovery logic
 - UI improvements to the Streamlit frontend
 - Test coverage for agents and pipeline
-
----
-
-## 📄 License
-
-This project is licensed under the **MIT License** — see [LICENSE](LICENSE) for details.
 
 ---
 
