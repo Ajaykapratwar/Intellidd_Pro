@@ -121,6 +121,56 @@ def init_db() -> None:
             ON research_runs(company_name)
         """)
 
+        # ── company_monitors ──────────────────────────────────────────────────
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS company_monitors (
+                monitor_id           TEXT PRIMARY KEY,
+                company_url          TEXT NOT NULL,
+                company_name         TEXT NOT NULL,
+                company_slug         TEXT NOT NULL,
+                frequency            TEXT DEFAULT 'weekly',
+                is_active            INTEGER DEFAULT 1,
+                created_at           TEXT NOT NULL,
+                last_run_at          TEXT DEFAULT '',
+                next_run_at          TEXT DEFAULT '',
+                alert_email          TEXT DEFAULT '',
+                alert_slack_webhook  TEXT DEFAULT '',
+                total_runs           INTEGER DEFAULT 0,
+                total_changes_found  INTEGER DEFAULT 0
+            )
+        """)
+
+        # ── change_events ────────────────────────────────────────────────────
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS change_events (
+                event_id      TEXT PRIMARY KEY,
+                monitor_id    TEXT NOT NULL,
+                new_run_id    TEXT NOT NULL,
+                old_run_id    TEXT NOT NULL,
+                detected_at   TEXT NOT NULL,
+                change_type   TEXT NOT NULL,
+                field         TEXT NOT NULL,
+                old_value     TEXT DEFAULT '',
+                new_value     TEXT DEFAULT '',
+                severity      TEXT DEFAULT 'low',
+                description   TEXT DEFAULT '',
+                alert_sent    INTEGER DEFAULT 0
+            )
+        """)
+
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_monitors_slug
+            ON company_monitors(company_slug)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_events_monitor
+            ON change_events(monitor_id)
+        """)
+        conn.execute("""
+            CREATE INDEX IF NOT EXISTS idx_events_detected
+            ON change_events(detected_at DESC)
+        """)
+
         conn.commit()
 
     print(f"  ✅ [DB] Database initialized: {config.DB_PATH}")

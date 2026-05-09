@@ -369,3 +369,193 @@ def count_runs(company_slug: Optional[str] = None) -> int:
             return result[0]
     except Exception:
         return 0
+
+import uuid as _uuid
+
+
+# ── Monitor write operations ──────────────────────────────────────────────────
+
+def save_monitor(company_url: str, company_name: str, frequency: str, alert_email: str = "", alert_slack_webhook: str = "",) -> Optional[str]:
+    """
+    Create a new company monitor record.
+    Returns the new monitor_id on success, None on failure.
+    """
+    monitor_id   = str(_uuid.uuid4())[:12]
+    company_slug = (
+        company_url.replace("https://", "").replace("http://", "")
+        .replace("www.", "").split("/")[0].split(".")[0].lower()
+    )
+    try:
+        with get_connection() as conn:
+            conn.execute("""
+                INSERT INTO company_monitors (
+                    monitor_id, company_url, company_name, company_slug,
+                    frequency, is_active, created_at,
+                    alert_email, alert_slack_webhook
+                ) VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)
+            """, (
+                monitor_id, company_url, company_name, company_slug,
+                frequency, datetime.now().isoformat(),
+                alert_email, alert_slack_webhook,
+            ))
+            conn.commit()
+        print(f"  💾 [DB] Monitor saved: {monitor_id} ({company_name})")
+        return monitor_id
+    except Exception as e:
+        print(f"  ❌ [DB] Failed to save monitor: {e}")
+        return None
+
+
+def update_monitor_last_run(monitor_id: str) -> bool:
+    """Update last_run_at and increment total_runs after a job completes."""
+    try:
+        with get_connection() as conn:
+            conn.execute("""
+                UPDATE company_monitors
+                SET last_run_at = ?, total_runs = total_runs + 1
+                WHERE monitor_id = ?
+            """, (datetime.now().isoformat(), monitor_id))
+            conn.commit()
+        return True
+    except Exception as e:
+        print(f"  ❌ [DB] update_monitor_last_run failed: {e}")
+        return False
+
+
+def toggle_monitor_active(monitor_id: str, active: bool) -> bool:
+    """Enable or disable a monitor."""
+    try:
+        with get_connection() as conn:
+            conn.execute(
+                "UPDATE company_monitors SET is_active = ? WHERE monitor_id = ?",
+                (1 if active else 0, monitor_id)
+            )
+            conn.commit()
+        return True
+    except Exception as e:
+        print(f"  ❌ [DB] toggle_monitor_active failed: {e}")
+        return False
+
+
+def delete_monitor(monitor_id: str) -> bool:
+    """Permanently delete a monitor."""
+    try:
+        with get_connection() as conn:
+            conn.execute(
+                "DELETE FROM company_monitors WHERE monitor_id = ?",
+                (monitor_id,)
+            )
+            conn.commit()
+        return True
+    except Exception as e:
+        print(f"  ❌ [DB] delete_monitor failed: {e}")
+        return False
+
+
+# ── Monitor read operations ───────────────────────────────────────────────────
+
+def get_monitor(monitor_id: str) -> Optional[dict]:
+    """Get a single monitor by ID as a dict."""
+    try:
+        with get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM company_monitors WHERE monitor_id = ?",
+                (monitor_id,)
+            ).fetchone()
+            return dict(row) if row else None
+    except Exception as e:
+        print(f"  ❌ [DB] get_monitor failed: {e}")
+        return None
+
+
+def list_monitors(active_only: bool = False) -> list[dict]:
+    """
+    List all monitors ordered by creation date.
+    Args:
+        active_only: If True, only return monitors with is_active = 1
+    """
+    try:
+        with get_connection() as conn:
+            where = "WHERE is_active = 1" if active_only else ""
+            rows  = conn.execute(f"""
+                SELECT * FROM company_monitors
+                {where}
+                ORDER BY created_at DESC
+            """).fetchall()
+            return [dict(r) for r in rows]
+    except Exception as e:
+        print(f"  ❌ [DB] list_monitors failed: {e}")
+        return []
+
+
+# ── Change event operations ───────────────────────────────────────────────────
+
+def save_change_event(
+    monitor_id: str,
+    new_run_id: str,
+    old_run_id: str,
+    event,                 # ChangeEvent dataclass
+) -> bool:
+    """Save a single ChangeEvent to the database."""
+    event_id = str(_uuid.uuid4())[:12]
+    try:
+        with get_connection() as conn:
+            conn.execute("""
+                INSERT INTO change_events (
+                    event_id, monitor_id, new_run_id, old_run_id,
+                    detected_at, change_type, field,
+                    old_value, new_value, severity, description
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                event_id, monitor_id, new_run_id, old_run_id,
+                event.detected_at, event.change_type, event.field,
+                str(event.old_value)[:500], str(event.new_value)[:500],
+                event.severity, event.description,
+            ))
+            # Increment total_changes_found on the monitor
+            conn.execute("""
+                UPDATE company_monitors
+                SET total_changes_found = total_changes_found + 1
+                WHERE monitor_id = ?
+            """, (monitor_id,))
+            conn.commit()
+        return True
+    except Exception as e:
+        print(f"  ❌ [DB] save_change_event failed: {e}")
+        return False
+
+
+def list_change_events(
+    monitor_id: Optional[str] = None,
+    limit:      int = 50,
+    severity:   Optional[str] = None,
+) -> list[dict]:
+    """
+    List change events, optionally filtered by monitor_id or severity.
+    Returns most recent first.
+    """
+    try:
+        conditions = []
+        params     = []
+
+        if monitor_id:
+            conditions.append("monitor_id = ?")
+            params.append(monitor_id)
+        if severity:
+            conditions.append("severity = ?")
+            params.append(severity)
+
+        where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+        params.append(limit)
+
+        with get_connection() as conn:
+            rows = conn.execute(f"""
+                SELECT * FROM change_events
+                {where}
+                ORDER BY detected_at DESC
+                LIMIT ?
+            """, params).fetchall()
+            return [dict(r) for r in rows]
+    except Exception as e:
+        print(f"  ❌ [DB] list_change_events failed: {e}")
+        return []

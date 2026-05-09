@@ -25,7 +25,7 @@ from persistence.models import ResearchRun
 # ── Change event model ────────────────────────────────────────────────────────
 
 @dataclass
-def ChangeEvent():
+class ChangeEvent():
     """Represents a single detected change between two runs."""
     change_type: str
     field: str
@@ -277,7 +277,7 @@ def _llm_semantic_diff(new_run: ResearchRun, old_run: ResearchRun, structural_ev
     old_summary = _extract_sections(old_run.report_markdown)
     new_summary = _extract_sections(new_run.report_markdown)
 
-    already_found = [e.change_type for e in structural_events]
+    already_found = [e.change_type for e in structural_event]
 
     prompt = f"""Compare these two due diligence reports for {new_run.company_name}.
 
