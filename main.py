@@ -23,6 +23,7 @@ from pathlib import Path
 from persistence.db import init_db
 from pipeline.runner import run_due_diligence
 from tools.observability import check_langsmith_config
+from ui.components.export_panel import render_export_panel_from_state
 
 import streamlit as st
 
@@ -154,6 +155,18 @@ st.markdown("""
 
 # ── Sidebar: Config warnings ──────────────────────────────────────────────────
 with st.sidebar:
+    st.markdown("---")
+    st.markdown("### 🚀 Quick Links")
+    st.markdown("[📚 History](/History)", unsafe_allow_html=False)
+    st.markdown("[💬 Q&A Chat](/QA_Chat)", unsafe_allow_html=False)
+    st.markdown("[📡 Monitoring](/Monitoring)", unsafe_allow_html=False)
+
+    st.markdown("---")
+    st.caption(
+        "IntelliDD Pro · AI-Powered Due Diligence  \n"
+        "[GitHub](https://github.com/Ajaykapratwar/Intellidd_Pro)"
+    )
+
     st.markdown("### ⚙️ Configuration")
     warnings = config.validate_config()
     if not warnings:
@@ -469,61 +482,10 @@ if run_button and company_url.strip():
 
     # ── Downloads ────────────────────────────────────────────────────────────
     st.markdown("---")
-    st.markdown('<div class="section-header">⬇️ Download Artifacts</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="section-header">⬇️ Export & Download</div>',
+        unsafe_allow_html=True,
+    )
+    render_export_panel_from_state(final_state)
 
-    dl_col1, dl_col2, dl_col3, dl_col4 = st.columns(4)
-
-    with dl_col1:
-        st.download_button(
-            "📄 Download Report (MD)",
-            data=report_md,
-            file_name=f"{company_slug}_dd_report.md",
-            mime="text/markdown",
-            use_container_width=True,
-        )
-
-    with dl_col2:
-        if risk_scorecard:
-            st.download_button(
-                "📊 Risk Scorecard (JSON)",
-                data=json.dumps(risk_scorecard, indent=2),
-                file_name=f"{company_slug}_risk_scorecard.json",
-                mime="application/json",
-                use_container_width=True,
-            )
-
-    with dl_col3:
-        if competitors:
-            st.download_button(
-                "🏆 Competitor Intel (JSON)",
-                data=json.dumps(competitor_data, indent=2),
-                file_name=f"{company_slug}_competitors.json",
-                mime="application/json",
-                use_container_width=True,
-            )
-
-    with dl_col4:
-        full_output = {
-            "run_id":           run_id,
-            "company_url":      url,
-            "pipeline_status":  pipeline_status,
-            "duration_seconds": final_state.get("duration_seconds", 0),
-            "company_profile":  final_state.get("seed_data", {}),
-            "team":             final_state.get("team_data", {}),
-            "investors":        final_state.get("investor_data", {}),
-            "press":            final_state.get("press_data", {}),
-            "financials":       final_state.get("financials_data", {}),
-            "tech_stack":       final_state.get("tech_stack_data", {}),
-            "social":           final_state.get("social_data", {}),
-            "competitors":      final_state.get("competitor_data", {}),
-            "risk_scorecard":   final_state.get("risk_scorecard", {}),
-        }
-        st.download_button(
-            "📦 Full Output (JSON)",
-            data=json.dumps(full_output, indent=2),
-            file_name=f"{company_slug}_full_output.json",
-            mime="application/json",
-            use_container_width=True,
-        )
-
-    st.caption(f"📁 All artifacts saved to: `{output_dir}`")
+    st.caption(f"📁 All raw artifacts saved to: `{final_state.get('output_dir', '')}`")

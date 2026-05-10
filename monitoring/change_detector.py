@@ -116,8 +116,12 @@ def _structural_diff(new_run: ResearchRun, old_run: ResearchRun) -> list[ChangeE
         ))
     
     # ── Risk score changes ────────────────────────────────────────────────────
-    old_risk = old_run.overall_risk_score
-    new_risk = new_run.overall_risk_score
+    try:
+        old_risk = int(old_run.overall_risk_score)
+        new_risk = int(new_run.overall_risk_score)
+    except (TypeError, ValueError):
+        old_risk = None
+        new_risk = None
 
     if old_risk is not None and new_risk is not None:
         delta = abs(new_risk - old_risk)
@@ -205,7 +209,7 @@ def _structural_diff(new_run: ResearchRun, old_run: ResearchRun) -> list[ChangeE
 
     if _changed(old_pos, new_pos) and "Unknown" not in (old_pos, new_pos):
         events.append(ChangeEvent(
-            change_type="market_position_shift",
+            change_type="market_position_change",
             field="market_position",
             old_value=_safe_str(old_pos),
             new_value=_safe_str(new_pos),

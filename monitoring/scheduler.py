@@ -109,7 +109,7 @@ def _run_monitor_job(monitor_id: str) -> None:
             queries.save_change_event(
                 monitor_id=monitor_id,
                 new_run_id=new_run_id,
-                old_run_id = prev_runs.run_id
+                old_run_id = prev_runs.run_id,
                 event=event,
             )
         
